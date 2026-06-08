@@ -9,7 +9,6 @@ permissions:
 
 jobs:
   create-markdown:
-    if: contains(github.event.issue.labels.*.name, 'flashcard')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
