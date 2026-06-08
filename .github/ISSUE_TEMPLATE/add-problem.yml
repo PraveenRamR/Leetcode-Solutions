@@ -1,0 +1,50 @@
+name: "Add LeetCode Problem"
+description: "Submit a new solved DSA problem to your flashcards"
+title: "[Problem ID] Problem Name"
+labels: ["flashcard"]
+body:
+  - type: input
+    id: problem_id
+    attributes:
+      label: "Problem ID / Number"
+      placeholder: "e.g., 1"
+    validations:
+      required: true
+  - type: input
+    id: problem_title
+    attributes:
+      label: "Problem Title"
+      placeholder: "e.g., Two Sum"
+    validations:
+      required: true
+  - type: dropdown
+    id: difficulty
+    attributes:
+      label: "Difficulty"
+      options:
+        - Easy
+        - Medium
+        - Hard
+    validations:
+      required: true
+  - type: input
+    id: tags
+    attributes:
+      label: "Tags (Comma separated)"
+      placeholder: "e.g., Arrays, Hash Map"
+  - type: textarea
+    id: intuition
+    attributes:
+      label: "Core Intuition (Flashcard Front)"
+      description: "Explain the core trick/pattern in 1-2 sentences."
+      placeholder: "Do not use nested loops. Use a hash map to look up the complement..."
+    validations:
+      required: true
+  - type: textarea
+    id: code
+    attributes:
+      label: "Optimized Code Solution (Flashcard Back)"
+      description: "Paste your working code solution here."
+      render: csharp
+    validations:
+      required: true
