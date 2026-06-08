@@ -1,0 +1,68 @@
+name: Generate Flashcard File
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  create-markdown:
+    if: contains(github.event.issue.labels.*.name, 'flashcard')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Parse Issue Form
+        uses: stefanbuck/github-issue-parser@v3
+        id: issue-parser
+        with:
+          template-path: .github/ISSUE_TEMPLATE/add-problem.yml
+
+      - name: Create Problems Directory
+        run: mkdir -p problems
+
+      - name: Build Markdown File
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          
+          // Get data from the parsed issue form fields
+          const id = `${{ steps.issue-parser.outputs.issueparser_problem_id }}`.trim();
+          const title = `${{ steps.issue-parser.outputs.issueparser_problem_title }}`.trim();
+          const difficulty = `${{ steps.issue-parser.outputs.issueparser_difficulty }}`.trim();
+          const tags = `${{ steps.issue-parser.outputs.issueparser_tags }}`.trim();
+          const intuition = `${{ steps.issue-parser.outputs.issueparser_intuition }}`.trim();
+          const code = `${{ steps.issue-parser.outputs.issueparser_code }}`.trim();
+          
+          // Sanitize filename
+          const filename = `problems/${id}-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.json`;
+          
+          // Structure data as clean JSON for the static site to consume easily
+          const problemData = {
+            id,
+            title,
+            difficulty,
+            tags: tags.split(',').map(t => t.trim()),
+            intuition,
+            code,
+            dateAdded: new Date().toISOString().split('T')[0]
+          };
+          
+          fs.writeFileSync(filename, JSON.stringify(problemData, null, 2));
+          console.log(`Saved flashcard data to ${filename}`);
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+          git add problems/*.json
+          git commit -m "Auto-generated flashcard for problem ${{ steps.issue-parser.outputs.issueparser_problem_id }}"
+          git push
+
+      - name: Close the Issue
+        run: gh issue close ${{ github.event.issue.number }} --comment "Flashcard successfully compiled and added to your static web build!"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
