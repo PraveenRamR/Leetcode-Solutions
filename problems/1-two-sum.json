@@ -1,0 +1,13 @@
+{
+  "id": "1",
+  "title": "Two Sum",
+  "difficulty": "Easy",
+  "tags": [
+    "Junior",
+    "Arrays",
+    "Hash Table"
+  ],
+  "intuition": "Brute Force - Have a nested for loop and an if to check condition",
+  "code": "class Solution {\npublic:\n    vector<int> twoSum(vector<int>& nums, int target) {\n        int n = nums.size();\n        for (int i = 0; i < n - 1; i++) {\n            for (int j = i + 1; j < n; j++) {\n                if (nums[i] + nums[j] == target) {\n                    return {i, j};\n                }\n            }\n        }\n        return {};\n    }\n};",
+  "dateAdded": "2026-06-08"
+}
