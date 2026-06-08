@@ -25,16 +25,33 @@ jobs:
 
       - name: Build Markdown File
         shell: node {0}
+        env:
+          PROBLEM_ID: ${{ steps.issue-parser.outputs.issueparser_problem_id }}
+          PROBLEM_TITLE: ${{ steps.issue-parser.outputs.issueparser_problem_title }}
+          DIFFICULTY: ${{ steps.issue-parser.outputs.issueparser_difficulty }}
+          TAGS: ${{ steps.issue-parser.outputs.issueparser_tags }}
+          INTUITION: ${{ steps.issue-parser.outputs.issueparser_intuition }}
+          CODE: ${{ steps.issue-parser.outputs.issueparser_code }}
         run: |
           const fs = require('fs');
           
-          // Get data from the parsed issue form fields
-          const id = `${{ steps.issue-parser.outputs.issueparser_problem_id }}`.trim();
-          const title = `${{ steps.issue-parser.outputs.issueparser_problem_title }}`.trim();
-          const difficulty = `${{ steps.issue-parser.outputs.issueparser_difficulty }}`.trim();
-          const tags = `${{ steps.issue-parser.outputs.issueparser_tags }}`.trim();
-          const intuition = `${{ steps.issue-parser.outputs.issueparser_intuition }}`.trim();
-          const code = `${{ steps.issue-parser.outputs.issueparser_code }}`.trim();
+          // Get data safely from environment variables to avoid string syntax errors
+          const id = (process.env.PROBLEM_ID || Date.now().toString()).trim();
+          const title = (process.env.PROBLEM_TITLE || 'Untitled').trim();
+          const difficulty = (process.env.DIFFICULTY || 'Unknown').trim();
+          const tagsStr = (process.env.TAGS || '').trim();
+          const intuition = (process.env.INTUITION || '').trim();
+          let code = (process.env.CODE || '').trim();
+          
+          // Automatically strip markdown backticks if they exist
+          if (code.startsWith('```')) {
+            const lines = code.split('\n');
+            lines.shift(); // Remove first line (e.g., ```csharp)
+            if (lines[lines.length - 1].trim() === '```') {
+              lines.pop(); // Remove last line (```)
+            }
+            code = lines.join('\n').trim();
+          }
           
           // Sanitize filename
           const filename = `problems/${id}-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.json`;
@@ -44,7 +61,7 @@ jobs:
             id,
             title,
             difficulty,
-            tags: tags.split(',').map(t => t.trim()).filter(Boolean),
+            tags: tagsStr.split(',').map(t => t.trim()).filter(Boolean),
             intuition,
             code,
             dateAdded: new Date().toISOString().split('T')[0]
