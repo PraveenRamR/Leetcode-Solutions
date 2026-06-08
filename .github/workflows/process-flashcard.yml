@@ -46,7 +46,7 @@ jobs:
           // Automatically strip markdown backticks if they exist
           if (code.startsWith('```')) {
             const lines = code.split('\n');
-            lines.shift(); // Remove first line (e.g., ```csharp)
+            lines.shift();
             if (lines[lines.length - 1].trim() === '```') {
               lines.pop(); // Remove last line (```)
             }
