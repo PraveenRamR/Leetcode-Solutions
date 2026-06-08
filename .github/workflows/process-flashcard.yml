@@ -9,7 +9,6 @@ permissions:
 
 jobs:
   create-markdown:
-    if: contains(github.event.issue.labels.*.name, 'flashcard')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -45,7 +44,7 @@ jobs:
             id,
             title,
             difficulty,
-            tags: tags.split(',').map(t => t.trim()),
+            tags: tags.split(',').map(t => t.trim()).filter(Boolean),
             intuition,
             code,
             dateAdded: new Date().toISOString().split('T')[0]
