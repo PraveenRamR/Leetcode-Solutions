@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DSA Flashcard Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .flashcard { perspective: 1000px; }
+        .flashcard-inner {
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        .flashcard.flipped .flashcard-inner {
+            transform: rotateY(180deg);
+        }
+        .front, .back { backface-visibility: hidden; }
+        .back { transform: rotateY(180deg); }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen p-6 font-sans">
+	
+    <div class="flex flex-col md:flex-row gap-4 justify-center items-center mb-10 w-full max-w-2xl mx-auto">
+            <input 
+                type="text" 
+                id="searchInput" 
+                placeholder="Search by title or tag (e.g., Arrays)..." 
+                class="w-full bg-gray-800 text-gray-200 border border-gray-700 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
+            >
+            <select 
+                id="difficultyFilter" 
+                class="w-full md:w-48 bg-gray-800 text-gray-200 border border-gray-700 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm appearance-none cursor-pointer"
+            >
+                <option value="All">All Difficulties</option>
+                <option value="Easy">Easy</option>
+                <option value="Medium">Medium</option>
+                <option value="Hard">Hard</option>
+            </select>
+        </div>	
+    <div class="max-w-6xl mx-auto">
+        <header class="mb-10 text-center">
+            <h1 class="text-4xl font-extrabold text-indigo-400 mb-2">LeetCode Active Recall Dashboard</h1>
+            <p class="text-gray-400">Click any card to reveal the core intuition and optimized implementation.</p>
+        </header>
+
+        <div id="cards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            </div>
+    </div>
+
+    <script>
+       // REPLACE WITH YOUR ACTUAL GITHUB USERNAME AND REPO NAME
+const USERNAME = 'PraveenRamR';
+const REPO = 'Leetcode-Solutions';
+const API_URL = `https://api.github.com/repos/${USERNAME}/${REPO}/contents/problems`;
+
+let allProblems = []; // Store fetched data so we can filter instantly
+
+// 1. Fetch data from GitHub
+async function loadFlashcards() {
+    const grid = document.getElementById('cards-grid');
+    grid.innerHTML = '<p class="text-indigo-400 col-span-full text-center animate-pulse">Loading flashcards from GitHub...</p>';
+    
+    try {
+        const response = await fetch(API_URL);
+        if (!response.ok) throw new Error("Could not fetch problem repository directory");
+        const files = await response.json();
+
+        // Fetch each file's content
+        for (const file of files) {
+            if (!file.name.endsWith('.json')) continue;
+            const dataResp = await fetch(file.download_url);
+            const item = await dataResp.json();
+            allProblems.push(item);
+        }
+
+        // Render initially
+        renderCards(allProblems);
+    } catch (err) {
+        grid.innerHTML = `<p class="text-red-400 col-span-full text-center">Failed to load cards. Make sure your repository is public and configurations match.</p>`;
+        console.error(err);
+    }
+}
+
+// 2. Render cards to the DOM
+function renderCards(cardsToRender) {
+    const grid = document.getElementById('cards-grid');
+    grid.innerHTML = ''; // Clear current grid
+
+    if (cardsToRender.length === 0) {
+        grid.innerHTML = '<p class="text-gray-500 col-span-full text-center py-10">No problems match your search criteria.</p>';
+        return;
+    }
+
+    const diffColors = {
+        'Easy': 'bg-green-500/20 text-green-300 border-green-500/40',
+        'Medium': 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40',
+        'Hard': 'bg-red-500/20 text-red-300 border-red-500/40'
+    };
+
+    cardsToRender.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'flashcard h-96 cursor-pointer';
+        card.onclick = () => card.classList.toggle('flipped');
+
+        card.innerHTML = `
+            <div class="flashcard-inner relative w-full h-full duration-500">
+                <div class="front absolute w-full h-full bg-gray-800 border border-gray-700 rounded-xl p-6 flex flex-col justify-between shadow-xl">
+                    <div>
+                        <div class="flex justify-between items-start mb-4">
+                            <span class="text-xs px-2 py-1 rounded border ${diffColors[item.difficulty] || 'bg-gray-700'}">${item.difficulty}</span>
+                            <span class="text-xs text-gray-500">#${item.id}</span>
+                        </div>
+                        <h2 class="text-xl font-bold text-white mb-4">${item.title}</h2>
+                        <div class="flex flex-wrap gap-2">
+                            ${item.tags.map(t => `<span class="text-xs bg-gray-700 px-2 py-1 rounded text-gray-300">${t}</span>`).join('')}
+                        </div>
+                    </div>
+                    <div class="text-center text-sm text-indigo-400 font-semibold mt-auto">Click to flip 🔄</div>
+                </div>
+                <div class="back absolute w-full h-full bg-slate-800 border border-indigo-500/30 rounded-xl p-6 flex flex-col overflow-y-auto shadow-xl">
+                    <h3 class="text-indigo-400 font-bold text-sm uppercase tracking-wider mb-1">Core Intuition</h3>
+                    <p class="text-gray-200 text-sm mb-4 leading-relaxed">${item.intuition}</p>
+                    <h3 class="text-emerald-400 font-bold text-sm uppercase tracking-wider mb-1">Optimized Solution</h3>
+                    <pre class="bg-gray-950 p-3 rounded text-xs font-mono text-emerald-300 overflow-x-auto whitespace-pre-wrap flex-grow">${escapeHTML(item.code)}</pre>
+                </div>
+            </div>
+        `;
+        grid.appendChild(card);
+    });
+}
+
+// 3. Filter Logic
+function applyFilters() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const difficultyVal = document.getElementById('difficultyFilter').value;
+
+    const filtered = allProblems.filter(item => {
+        // Check if search matches title OR any of the tags
+        const matchesSearch = item.title.toLowerCase().includes(searchTerm) || 
+                              item.tags.some(tag => tag.toLowerCase().includes(searchTerm));
+                              
+        // Check difficulty
+        const matchesDiff = difficultyVal === 'All' || item.difficulty === difficultyVal;
+
+        return matchesSearch && matchesDiff;
+    });
+
+    renderCards(filtered);
+}
+
+// 4. Utility function
+function escapeHTML(str) {
+    return str.replace(/[&<>'"]/g, 
+        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+    );
+}
+
+// 5. Event Listeners for instant filtering
+document.getElementById('searchInput').addEventListener('input', applyFilters);
+document.getElementById('difficultyFilter').addEventListener('change', applyFilters);
+
+// Boot up
+loadFlashcards();
+    </script>
+</body>
+</html>
